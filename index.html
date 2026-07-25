@@ -1621,8 +1621,7 @@
           orbPhase: "idle",
           orbTarget: 0,
           orbXs: new Spring(0, 60, 12),
-          exitPhase: null,
-          exitTimer: 0,
+          exit: null,
         };
         books.push(b);
         return b;
@@ -1796,60 +1795,99 @@
         b.slotScale = slot.s;
       }
 
-      /* the two unselected books hop a little, then sink straight down out of
-         frame from exactly where they stood: same x, same z, same rotation. */
-      const HOP = 0.36,
-        SUNK = -8.6;
+      /* ---------------------------------------------------------------------
+         Exit / return motion.
 
-      function exitSlot(h, phase) {
-        return {
-          p: [h.p[0], phase === "hop" ? h.p[1] + HOP : SUNK, h.p[2]],
-          r: h.r,
-          s: h.s,
-        };
+         A spring aimed far below the frame accelerates the whole way, which
+         reads as a fast drop. Instead the vertical axis is handed to a small
+         keyframed tween for the duration of the move, so the curve is designed:
+         a soft decelerating lift, a beat of hang time, then a long glide down
+         that eases in and out. Closing plays the same idea in reverse.
+         --------------------------------------------------------------------- */
+      const EASE = {
+        hold: () => 1,
+        /* short tail: reaches the apex without loitering there */
+        outQuad: (t) => 1 - (1 - t) * (1 - t),
+        outQuint: (t) => 1 - Math.pow(1 - t, 5),
+        /* leaves rest promptly, still zero velocity at both ends */
+        inOutSine: (t) => -(Math.cos(Math.PI * t) - 1) / 2,
+      };
+
+      const LIFT = 0.38, /* how far the book floats up before letting go */
+        CLEAR = 4.2; /* far enough below its slot to be out of frame */
+
+      function playY(b, segs) {
+        b.exit = { segs, i: 0, t: 0 };
       }
 
-      function bounceOut(b, i) {
-        const h = SLOTS.hero[i];
-        const s = b.springs;
-        clearTimeout(b.exitTimer);
-        b.exitPhase = "hop";
-        s.py.k = 165;
-        s.py.d = 17;
-        setTargets(b, exitSlot(h, "hop"));
-        b.exitTimer = setTimeout(() => {
-          if (b.exitPhase !== "hop") return;
-          b.exitPhase = "drop";
-          s.py.k = 22;
-          s.py.d = 6.6;
-          s.py.vel = 0; /* let go at the top of the hop */
-          s.py.t = SUNK;
-        }, 240);
+      /* advances the tween and writes straight into the y spring, keeping the
+         spring inert so it neither fights the curve nor snaps at handover */
+      function stepY(b, dt) {
+        const ex = b.exit,
+          s = b.springs;
+        ex.t += dt;
+        let seg = ex.segs[ex.i];
+        while (seg && ex.t >= seg.d) {
+          ex.t -= seg.d;
+          s.py.v = seg.to;
+          if (seg.end) seg.end();
+          seg = ex.segs[++ex.i];
+        }
+        if (seg) s.py.v = seg.from + (seg.to - seg.from) * seg.ease(ex.t / seg.d);
+        else b.exit = null;
+        s.py.t = s.py.v;
+        s.py.vel = 0;
       }
 
-      function bounceIn(b, i) {
+      /* x, z and rotation are pinned to wherever the book already stands, so the
+         whole move happens on the y axis and nothing slides sideways */
+      function pinInPlace(b) {
         const s = b.springs;
-        clearTimeout(b.exitTimer);
-        b.exitPhase = null;
+        s.px.t = s.px.v;
+        s.pz.t = s.pz.v;
+        s.rx.t = s.rx.v;
+        s.ry.t = s.ry.v;
+        s.rz.t = s.rz.v;
+      }
+
+      function sendOut(b, i, delay) {
+        const y0 = SLOTS.hero[i].p[1],
+          here = b.springs.py.v,
+          apex = y0 + LIFT;
         b.root.visible = true;
-        s.py.k = 15;
-        s.py.d = 5.4; /* rise with a soft landing */
-        setTargets(b, SLOTS.hero[i]);
-        b.exitTimer = setTimeout(() => {
-          s.py.k = 17;
-          s.py.d = 6.8;
-        }, 1400);
+        pinInPlace(b);
+        playY(b, [
+          { d: delay, from: here, to: here, ease: EASE.hold },
+          { d: 0.28, from: here, to: apex, ease: EASE.outQuad },
+          {
+            d: 0.9,
+            from: apex,
+            to: y0 - CLEAR,
+            ease: EASE.inOutSine,
+            end: () => {
+              b.root.visible = false;
+            },
+          },
+        ]);
+      }
+
+      function bringBack(b, i, delay) {
+        const here = b.springs.py.v;
+        b.root.visible = true;
+        pinInPlace(b);
+        playY(b, [
+          { d: delay, from: here, to: here, ease: EASE.hold },
+          { d: 1.0, from: here, to: SLOTS.hero[i].p[1], ease: EASE.outQuint },
+        ]);
       }
 
       function applyMode() {
         if (state.mode === "hero" || state.mode === "closing") {
           books.forEach((b, i) => setTargets(b, SLOTS.hero[i]));
-        } else {
-          books.forEach((b, i) => {
-            if (b === state.selected) setTargets(b, SLOTS.detail);
-            else if (b.exitPhase)
-              setTargets(b, exitSlot(SLOTS.hero[i], b.exitPhase));
-          });
+        } else if (state.selected) {
+          /* only the open book is retargeted; the other two keep the x, z and
+             rotation they stood at while their y is tween-driven */
+          setTargets(state.selected, SLOTS.detail);
         }
       }
 
@@ -1910,6 +1948,7 @@
         state.pillLock = null;
         state.kbIndex = -1;
         hidePill();
+        book.exit = null; /* hand y back to the spring if it was still tweening */
         book.orbY = RM ? 0 : -6.2832;
         book.orbYv = RM ? 0 : 3;
         book.orbPhase = "return";
@@ -1919,11 +1958,17 @@
         populatePanel(book.cfg);
         computeSlots();
         applyMode();
+        let out = 0;
         books.forEach((b, i) => {
-          if (b !== book) bounceOut(b, i);
+          if (b !== book) sendOut(b, i, out++ * 0.08); /* slight stagger */
         });
-        camTo("detail");
-        setTimeout(() => leaves.activate(book), 850);
+        /* the frame stays put until the pair has dropped clear, otherwise the
+           pan would carry them sideways instead of straight down */
+        setTimeout(() => {
+          if (state.mode === "opening" || state.mode === "detail")
+            camTo("detail");
+        }, 700);
+        setTimeout(() => leaves.activate(book), 900);
         setTimeout(() => {
           if (state.mode === "opening") {
             document.body.classList.add("detail-open");
@@ -1949,10 +1994,12 @@
         setTimeout(() => {
           document.body.classList.remove("transit");
           applyMode();
-          books.forEach((bk, i) => {
-            if (bk !== b) bounceIn(bk, i);
-          });
           camTo("hero");
+          /* and they only climb back once the frame has finished returning */
+          let back = 0;
+          books.forEach((bk, i) => {
+            if (bk !== b) bringBack(bk, i, 0.85 + back++ * 0.1);
+          });
         }, 250);
         setTimeout(() => {
           if (state.mode === "closing") {
@@ -2226,7 +2273,8 @@
         s.sc.t = b.slotScale * (isHov && state.mode === "hero" ? 1.09 : 1);
 
         s.px.update(dt);
-        s.py.update(dt);
+        if (b.exit) stepY(b, dt);
+        else s.py.update(dt);
         s.pz.update(dt);
         s.rx.update(dt);
         s.ry.update(dt);
@@ -2243,8 +2291,6 @@
         b.float.rotation.z = Math.sin(t * 0.9 + b.phase * 1.7) * 0.006 * idle;
 
         b.root.position.set(s.px.v, s.py.v, s.pz.v + s.lift.v);
-        /* once a sinking book has cleared the frame, stop drawing it */
-        if (b.exitPhase === "drop" && s.py.v < -6.2) b.root.visible = false;
         const sway = inDetail
           ? Math.sin(t * 0.45 + b.phase) * 0.035 * idle * (1 - activity)
           : 0;
