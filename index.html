@@ -1949,32 +1949,36 @@
         state.kbIndex = -1;
         hidePill();
         book.exit = null; /* hand y back to the spring if it was still tweening */
-        book.orbY = RM ? 0 : -6.2832;
-        book.orbYv = RM ? 0 : 3;
-        book.orbPhase = "return";
-        book.orbTarget = 0;
-        book.orbXs.set(0);
         document.body.classList.add("transit");
         populatePanel(book.cfg);
         computeSlots();
-        applyMode();
+
+        /* beat one: the other two lift and drop away. the chosen book holds its
+           ground here, so nothing crosses paths with them. */
         let out = 0;
         books.forEach((b, i) => {
           if (b !== book) sendOut(b, i, out++ * 0.08); /* slight stagger */
         });
-        /* the frame stays put until the pair has dropped clear, otherwise the
-           pan would carry them sideways instead of straight down */
+
+        /* beat two, the moment they are clear: the chosen book turns and crosses
+           to the detail slot, and the frame pans with it */
         setTimeout(() => {
-          if (state.mode === "opening" || state.mode === "detail")
-            camTo("detail");
-        }, 700);
-        setTimeout(() => leaves.activate(book), 900);
+          if (state.mode !== "opening" && state.mode !== "detail") return;
+          book.orbY = RM ? 0 : -6.2832;
+          book.orbYv = RM ? 0 : 3;
+          book.orbPhase = "return";
+          book.orbTarget = 0;
+          book.orbXs.set(0);
+          applyMode();
+          camTo("detail");
+        }, 760);
+        setTimeout(() => leaves.activate(book), 1000);
         setTimeout(() => {
           if (state.mode === "opening") {
             document.body.classList.add("detail-open");
             state.mode = "detail";
           }
-        }, 1250);
+        }, 1400);
       }
 
       function close() {
@@ -2030,7 +2034,9 @@
         t0: 0,
         type: "mouse",
         seen: false,
+        id: null, /* only the first finger down drives the scene */
       };
+      const isTouch = () => ptr.type === "touch" || ptr.type === "pen";
       let dragBook = null,
         rayBook = null;
       const orbit = { drag: false, dxAcc: 0, dyAcc: 0 };
@@ -2047,6 +2053,7 @@
       });
 
       canvas.addEventListener("pointermove", (e) => {
+        if (ptr.id !== null && e.pointerId !== ptr.id) return;
         const dxN = (e.clientX - ptr.lastX) / innerWidth;
         const dyN = (e.clientY - ptr.lastY) / innerHeight;
         ptr.lastX = e.clientX;
@@ -2074,8 +2081,15 @@
       });
 
       canvas.addEventListener("pointerdown", (e) => {
+        if (ptr.id !== null) return; /* a second finger must not hijack the drag */
+        ptr.id = e.pointerId;
         ptr.cx = e.clientX;
         ptr.cy = e.clientY;
+        /* seed the move baseline: without this, a touch's first pointermove
+           measures from wherever the pointer was last seen and the resulting
+           jump is mistaken for a drag, so taps never open a book */
+        ptr.lastX = e.clientX;
+        ptr.lastY = e.clientY;
         ptr.ndcX = (e.clientX / innerWidth) * 2 - 1;
         ptr.ndcY = -(e.clientY / innerHeight) * 2 + 1;
         ptr.type = e.pointerType || "mouse";
@@ -2104,26 +2118,44 @@
       });
 
       window.addEventListener("pointerup", (e) => {
+        if (ptr.id !== null && e.pointerId !== ptr.id) return;
+        ptr.id = null;
         orbit.drag = false;
         if (dragBook) {
-          const wasDrag = ptr.moved > 14;
+          /* fingers wobble and press longer than a mouse click, so a tap gets a
+             wider slop radius and a longer window before it counts as a drag */
+          const slop = isTouch() ? 26 : 14;
+          const limit = isTouch() ? 650 : 450;
+          const wasDrag = ptr.moved > slop;
           dragBook.springs.drag.t = 0;
           if (
             !wasDrag &&
             state.mode === "hero" &&
-            performance.now() - ptr.t0 < 450
-          ) {
-            if (ptr.type === "touch") {
-              if (state.pillLock === dragBook) open(dragBook);
-              else state.pillLock = dragBook;
-            } else {
-              open(dragBook);
-            }
-          }
+            performance.now() - ptr.t0 < limit
+          )
+            open(dragBook); /* one tap opens, on touch as well as mouse */
           dragBook = null;
         }
         ptr.down = false;
+        /* touch has no hover: drop the hit so the book does not stay lifted */
+        if (isTouch()) rayBook = null;
       });
+
+      /* the OS can take a gesture away (scroll, palm, call). without this the
+         book would stay peeled open and the drag state would never clear */
+      function cancelPointer(e) {
+        if (e && ptr.id !== null && e.pointerId !== ptr.id) return;
+        ptr.id = null;
+        ptr.down = false;
+        orbit.drag = false;
+        if (dragBook) {
+          dragBook.springs.drag.t = 0;
+          dragBook = null;
+        }
+        if (isTouch()) rayBook = null;
+      }
+      window.addEventListener("pointercancel", cancelPointer);
+      canvas.addEventListener("lostpointercapture", cancelPointer);
 
       window.addEventListener("keydown", (e) => {
         if (e.key === "Escape") close();
@@ -2361,11 +2393,13 @@
         camera.position.set(camX.update(dt), camY.update(dt), camZ.update(dt));
         camera.lookAt(lookX.update(dt), lookY.update(dt), 0);
 
-        /* open slip: rides just under the cursor while it is over a book */
+        /* open slip: rides just under the cursor while it is over a book. it is
+           a cursor affordance, so touch never shows it — there a tap just opens */
         if (
           state.mode === "hero" &&
           state.hovered &&
           ptr.seen &&
+          !isTouch() &&
           !(ptr.down && ptr.moved > 14)
         ) {
           const tx = ptr.cx,
@@ -2406,7 +2440,7 @@
       });
       camTo("hero");
 
-      window.addEventListener("resize", () => {
+      function relayout() {
         renderer.setSize(innerWidth, innerHeight);
         camera.aspect = innerWidth / innerHeight;
         camera.updateProjectionMatrix();
@@ -2417,7 +2451,17 @@
             ? "detail"
             : "hero",
         );
+      }
+
+      window.addEventListener("resize", relayout);
+      /* phones: rotation reports stale dimensions for a beat, and the address bar
+         collapsing changes the height without always firing a window resize */
+      window.addEventListener("orientationchange", () => {
+        relayout();
+        setTimeout(relayout, 250);
       });
+      if (window.visualViewport)
+        window.visualViewport.addEventListener("resize", relayout);
 
       animate();
     </script>
