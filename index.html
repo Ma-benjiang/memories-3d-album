@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
-    <title>Books</title>
+    <title>Memories · 3D 相册</title>
     <!--
   Interactive 3D book showcase. Single file, no build step.
 
@@ -19,11 +19,11 @@
 -->
     <style>
       :root {
-        --navy: #141a32;
-        --pink: #f591ac;
-        --cream: #fdfbf4;
-        --lav: #c9d0ee;
-        --peri: #96a2de;
+        --navy: #201914;
+        --pink: #c6a56b;
+        --cream: #f4ecdc;
+        --lav: #ddd0b9;
+        --peri: #a88759;
       }
       * {
         box-sizing: border-box;
@@ -38,15 +38,17 @@
         overflow: hidden;
         background: radial-gradient(
           120% 100% at 50% 0%,
-          #1b2246 0%,
-          #141a33 55%,
-          #0f142a 100%
+          #40342b 0%,
+          #241d18 55%,
+          #15110e 100%
         );
         color: #fff;
         font-family:
           -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue",
           Arial, sans-serif;
       }
+      body.day{background:radial-gradient(120% 100% at 50% 0%,#6e5a48 0%,#342920 58%,#18120f 100%)}
+      body.night{background:radial-gradient(120% 100% at 50% 0%,#292b38 0%,#171820 58%,#0b0c11 100%)}
       button {
         font-family: inherit;
         cursor: pointer;
@@ -73,7 +75,7 @@
       .hero-word span {
         display: block;
         white-space: nowrap;
-        font-size: min(22.5vw, 45vh);
+        font-size: min(14.5vw, 28vh);
         font-weight: 800;
         letter-spacing: -0.015em;
         line-height: 0.85;
@@ -95,6 +97,16 @@
         opacity: 0;
         transform: translateX(-50%) translateY(-44px);
       }
+      body.table-mode .hero-word{opacity:.12;transform:translateX(-50%) translateY(-28px)}
+      body.table-mode #timeline{opacity:0;pointer-events:none}
+      #timeline{position:fixed;left:50%;bottom:24px;z-index:35;transform:translateX(-50%);display:flex;gap:8px;padding:8px;background:rgba(28,21,16,.72);backdrop-filter:blur(12px);border:1px solid rgba(210,177,119,.25);border-radius:999px}
+      #timeline button{padding:8px 15px;border-radius:999px;background:transparent;color:#d9c6a6;font-size:13px}
+      #timeline button:hover{background:#eee4d2;color:#2a211b}
+      body.detail-open #timeline,body.transit #timeline{opacity:0;pointer-events:none}
+      .paw-print{position:fixed;z-index:60;font-size:28px;pointer-events:none;animation:pawWalk 1.8s ease-out forwards}
+      @keyframes pawWalk{0%{opacity:0;transform:translateY(25px) rotate(-20deg) scale(.5)}20%{opacity:.8}100%{opacity:0;transform:translateY(-90px) rotate(18deg) scale(1.1)}}
+      #toast{position:fixed;left:50%;top:88px;z-index:90;transform:translate(-50%,-12px);padding:10px 18px;border-radius:999px;background:#f1e7d4;color:#30241b;box-shadow:0 12px 35px rgba(0,0,0,.28);opacity:0;pointer-events:none;transition:.28s ease}
+      #toast.on{opacity:1;transform:translate(-50%,0)}
 
       /* ---------- canvas ---------- */
       #gl {
@@ -131,6 +143,7 @@
         display: flex;
         align-items: center;
         gap: 12px;
+        margin-left: auto;
       }
       .menu-btn {
         width: 48px;
@@ -489,20 +502,26 @@
     </style>
   </head>
   <body>
-    <div class="hero-word"><span>Books</span></div>
+    <div class="hero-word"><span>MEMORIES</span></div>
 
     <canvas id="gl"></canvas>
 
     <nav>
-      <div class="logo">Bestsellers</div>
       <div class="nav-r">
-        <button class="menu-btn" aria-label="Menu">=</button>
-        <button class="cta">Get Tickets</button>
+        <button class="menu-btn" id="uploadBtn" aria-label="上传照片">＋</button>
+        <button class="cta" id="collectionBtn">我的收藏</button>
       </div>
     </nav>
 
     <button id="openBtn">Open</button>
     <button id="closeBtn" aria-label="Close detail view">&#10005;</button>
+    <input id="photoUpload" type="file" accept="image/*" hidden>
+    <div id="toast" role="status"></div>
+    <div id="timeline" aria-label="小狗成长时间轴">
+      <button data-album="0">夏日 · 奔跑</button>
+      <button data-album="1">雨夜 · 探索</button>
+      <button data-album="2">午后 · 长大</button>
+    </div>
 
     <div class="dp" id="dp" aria-live="polite">
       <h1 id="dpTitle"></h1>
@@ -510,7 +529,7 @@
       <div class="meta">
         <div class="stars" id="dpStars"></div>
         <div class="sep"></div>
-        <div class="src">Goodreads</div>
+        <div class="src">PHOTO ALBUM</div>
         <div class="year" id="dpYear"></div>
       </div>
       <div class="rule"></div>
@@ -527,11 +546,12 @@
               d="M3 12h18M12 3c2.8 2.6 2.8 15.4 0 18M12 3c-2.8 2.6-2.8 15.4 0 18"
             />
           </svg>
-          <span>English</span>
+          <span>私藏相册</span>
         </button>
-        <button class="pill buy">Buy Now</button>
-        <button class="pill buy">Buy Audiobook</button>
-        <button class="pill iconb" aria-label="Save">
+        <button class="pill buy">查看照片</button>
+        <button class="pill buy" id="memorySound">播放回忆</button>
+        <button class="pill buy" id="exportCard">生成纪念卡</button>
+        <button class="pill iconb" aria-label="收藏">
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -551,6 +571,7 @@
    ========================================================================= */
       const RM = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+      document.body.classList.add(new Date().getHours() >= 7 && new Date().getHours() < 18 ? "day" : "night");
 
       class Spring {
         constructor(v, k, d) {
@@ -661,9 +682,9 @@
         const c = mkCanvas(512, 256),
           x = c.getContext("2d");
         const g = x.createLinearGradient(0, 0, 0, 256);
-        g.addColorStop(0, "#5a6ba6");
-        g.addColorStop(0.55, "#262e52");
-        g.addColorStop(1, "#0a0d1d");
+        g.addColorStop(0, "#b89a74");
+        g.addColorStop(0.55, "#4b392e");
+        g.addColorStop(1, "#17110d");
         x.fillStyle = g;
         x.fillRect(0, 0, 512, 256);
         envBlob(x, 140, 66, 95, "255,255,255", 0.95); // key
@@ -677,9 +698,9 @@
         pmrem.dispose();
       })();
 
-      const hemi = new THREE.HemisphereLight(0x8fa0d8, 0x0d1024, 0.32);
+      const hemi = new THREE.HemisphereLight(0xe9d5b5, 0x160f0b, 0.36);
       scene.add(hemi);
-      const key = new THREE.DirectionalLight(0xffffff, 0.82);
+      const key = new THREE.DirectionalLight(0xffe4bf, 1.08);
       key.position.set(3.5, 5, 6);
       key.castShadow = true;
       key.shadow.mapSize.set(2048, 2048);
@@ -692,16 +713,43 @@
       key.shadow.bias = -0.0004;
       key.shadow.normalBias = 0.02;
       scene.add(key);
-      const fill = new THREE.DirectionalLight(0xa9b6ff, 0.2);
+      const fill = new THREE.DirectionalLight(0xb9c9df, 0.28);
       fill.position.set(-4, 1, 4);
       scene.add(fill);
-      const rim = new THREE.DirectionalLight(0xff9db8, 0.3);
+      const rim = new THREE.DirectionalLight(0xf0b87a, 0.38);
       rim.position.set(-2, 3, -5);
       scene.add(rim);
 
       /* everything book-related lives under one root so it can be fit-scaled */
       const bookRoot = new THREE.Group();
       scene.add(bookRoot);
+
+      /* Single-photo portrait reconstruction: dimensional silhouette and glasses
+         are geometry; the supplied front view is used as the facial texture. */
+      const portraitAvatar = new THREE.Group();
+      portraitAvatar.visible = false;
+      portraitAvatar.position.set(1.75, -0.42, 0.25);
+      portraitAvatar.scale.setScalar(0.72);
+      const skin = new THREE.MeshStandardMaterial({ color: 0xc88768, roughness: 0.75 });
+      const hair = new THREE.MeshStandardMaterial({ color: 0x111116, roughness: 0.9 });
+      const frame = new THREE.MeshStandardMaterial({ color: 0x201719, metalness: 0.55, roughness: 0.25 });
+      const lens = new THREE.MeshPhysicalMaterial({ color: 0x4e3033, transparent: true, opacity: 0.42, roughness: 0.08, metalness: 0.2 });
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.68, 32, 24), skin);
+      head.scale.set(0.92, 1.17, 0.78); head.position.y = 0.44; portraitAvatar.add(head);
+      const hairCap = new THREE.Mesh(new THREE.SphereGeometry(0.7, 32, 20, 0, Math.PI * 2, 0, 1.45), hair);
+      hairCap.scale.set(0.96, 0.72, 0.82); hairCap.position.set(0, 0.98, 0.02); portraitAvatar.add(hairCap);
+      const shirt = new THREE.Mesh(new THREE.SphereGeometry(0.9, 28, 16), new THREE.MeshStandardMaterial({ color: 0x365fc1, roughness: 0.82 }));
+      shirt.scale.set(1, 0.54, 0.55); shirt.position.y = -0.72; portraitAvatar.add(shirt);
+      const glassGeo = new THREE.TorusGeometry(0.27, 0.025, 10, 28);
+      [-0.3, 0.3].forEach((x) => {
+        const ring = new THREE.Mesh(glassGeo, frame); ring.scale.y = 0.8; ring.position.set(x, 0.48, 0.56); portraitAvatar.add(ring);
+        const l = new THREE.Mesh(new THREE.CircleGeometry(0.245, 28), lens); l.scale.y = 0.8; l.position.set(x, 0.48, 0.565); portraitAvatar.add(l);
+      });
+      const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.025, 0.028), frame);
+      bridge.position.set(0, 0.48, 0.56); portraitAvatar.add(bridge);
+      const nose = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 10), skin);
+      nose.scale.set(0.72, 1.2, 1.5); nose.position.set(0, 0.22, 0.62); portraitAvatar.add(nose);
+      scene.add(portraitAvatar);
 
       /* =========================================================================
    2. Shared procedural textures
@@ -753,6 +801,41 @@
         }
         return new THREE.CanvasTexture(c);
       })();
+      const woodGrainTex = (function () {
+        const c = mkCanvas(512, 128), x = c.getContext("2d");
+        const g = x.createLinearGradient(0, 0, 0, 128);
+        g.addColorStop(0, "#3a2115"); g.addColorStop(.45, "#815334"); g.addColorStop(1, "#2a1710");
+        x.fillStyle = g; x.fillRect(0, 0, 512, 128);
+        for (let i = 0; i < 95; i++) {
+          const y = (i * 37) % 128;
+          x.strokeStyle = i % 4 ? "rgba(32,12,5,.18)" : "rgba(238,191,125,.12)";
+          x.lineWidth = .7 + (i % 3) * .55;
+          x.beginPath(); x.moveTo(0, y);
+          x.bezierCurveTo(130, y + Math.sin(i) * 8, 360, y - Math.cos(i) * 7, 512, y + Math.sin(i * 2) * 4);
+          x.stroke();
+        }
+        const t = tex(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2.2, 1);
+        return t;
+      })();
+      const tableRoot = new THREE.Group();
+      const tableTop = new THREE.Mesh(
+        new THREE.BoxGeometry(9.5, 0.28, 5.8),
+        new THREE.MeshStandardMaterial({
+          map: woodGrainTex, bumpMap: woodGrainTex, bumpScale: 0.018,
+          color: 0x6f4930, roughness: 0.62, metalness: 0.02,
+        }),
+      );
+      tableTop.position.set(0, -1.62, 0);
+      tableTop.receiveShadow = true;
+      tableRoot.add(tableTop);
+      const tableEdge = new THREE.Mesh(
+        new THREE.BoxGeometry(9.65, 0.18, 0.22),
+        new THREE.MeshStandardMaterial({ color: 0x2e1a11, roughness: 0.7 }),
+      );
+      tableEdge.position.set(0, -1.47, 2.86);
+      tableRoot.add(tableEdge);
+      tableRoot.visible = false;
+      scene.add(tableRoot);
 
       function striationTexture(vertical) {
         const s = 512,
@@ -1226,36 +1309,26 @@
       }
 
       function paintBack(x, w, h, cfg) {
-        x.fillStyle = cfg.backBg;
-        x.fillRect(0, 0, w, h);
-        const ink = cfg.backInk;
-        x.fillStyle = "rgba(" + ink + ",.5)";
-        rr(x, 150, 190, w - 460, 28, 14);
-        x.fill();
-        for (let i = 0; i < 9; i++) {
-          const lw = i === 8 ? w - 560 : w - 300 - Math.random() * 180;
-          x.fillStyle = "rgba(" + ink + ",.2)";
-          rr(x, 150, 300 + i * 56, lw, 15, 7);
-          x.fill();
+        x.fillStyle = "#aa8a62"; x.fillRect(0, 0, w, h);
+        for (let i = 0; i < 900; i++) {
+          x.fillStyle = `rgba(66,43,25,${.018 + (i % 5) * .006})`;
+          x.fillRect((i * 683) % w, (i * 977) % h, 2, 1);
         }
-        x.fillStyle = "rgba(" + ink + ",.45)";
-        x.beginPath();
-        x.arc(178, h - 186, 26, 0, 6.2832);
-        x.fill();
-        x.fillStyle = "#fff";
-        rr(x, w - 330, h - 262, 236, 152, 8);
-        x.fill();
-        x.fillStyle = "#111";
-        let bx = w - 310;
-        while (bx < w - 118) {
-          const bw = 2 + Math.random() * 6;
-          if (Math.random() > 0.42) x.fillRect(bx, h - 242, bw, 96);
-          bx += bw + 2 + Math.random() * 4;
-        }
-        x.font = "500 21px Arial";
-        x.textAlign = "center";
-        x.fillText("9 781234 567890", w - 212, h - 124);
-        x.textAlign = "left";
+        x.fillStyle = "#f1e7cf"; rr(x, 95, 75, w - 190, h - 150, 22); x.fill();
+        x.strokeStyle = "rgba(111,82,55,.2)"; x.lineWidth = 2;
+        for (let y = 300; y < h - 110; y += 76) { x.beginPath(); x.moveTo(145, y); x.lineTo(w - 145, y); x.stroke(); }
+        x.fillStyle = "#584331"; x.font = "italic 700 66px Georgia"; x.fillText(cfg.title, 150, 205);
+        x.font = "italic 34px Georgia"; x.fillStyle = "#7b5e45";
+        x.fillText(cfg.author, 150, 270); x.fillText(cfg.year, w - 390, 270);
+        const note = cfg.note || cfg.desc;
+        x.font = "italic 38px Georgia"; x.fillStyle = "#49372a";
+        const chars = [...note]; let line = "", lines = [];
+        chars.forEach(ch => { if (x.measureText(line + ch).width > w - 320) { lines.push(line); line = ch; } else line += ch; });
+        if (line) lines.push(line);
+        lines.slice(0, 5).forEach((s, i) => x.fillText(s, 160, 380 + i * 76));
+        x.fillStyle = "rgba(144,91,55,.72)";
+        [[w-230,h-210,30],[w-175,h-165,24],[w-120,h-210,30]].forEach(([px,py,r])=>{x.beginPath();x.arc(px,py,r,0,Math.PI*2);x.fill();});
+        x.beginPath(); x.ellipse(w - 175, h - 115, 62, 48, 0, 0, Math.PI * 2); x.fill();
       }
 
       function paintSpine(x, w, h, cfg) {
@@ -1279,74 +1352,100 @@
         x.globalAlpha = 1;
       }
 
+      /* Painterly photographic placeholders for albums that do not yet have a
+         real local image. They read as prints, not interface cards. */
+      function paintAlbum(x, w, h, cfg) {
+        const sky = x.createLinearGradient(0, 0, 0, h);
+        sky.addColorStop(0, cfg.photoA[0]);
+        sky.addColorStop(.58, cfg.photoA[1]);
+        sky.addColorStop(1, cfg.photoB[0]);
+        x.fillStyle = sky; x.fillRect(0, 0, w, h);
+
+        /* atmospheric sun / city glow */
+        const glow = x.createRadialGradient(w * .68, h * .34, 5, w * .68, h * .34, h * .32);
+        glow.addColorStop(0, "rgba(255,238,194,.9)");
+        glow.addColorStop(1, "rgba(255,220,170,0)");
+        x.fillStyle = glow; x.fillRect(0, 0, w, h);
+
+        /* layered distant landscape and foreground */
+        x.fillStyle = cfg.photoB[1];
+        x.beginPath(); x.moveTo(0, h * .7);
+        x.bezierCurveTo(w * .18, h * .5, w * .32, h * .72, w * .5, h * .55);
+        x.bezierCurveTo(w * .68, h * .38, w * .82, h * .68, w, h * .48);
+        x.lineTo(w, h); x.lineTo(0, h); x.closePath(); x.fill();
+        x.fillStyle = cfg.photoC[0];
+        x.beginPath(); x.moveTo(0, h * .82);
+        x.bezierCurveTo(w * .2, h * .64, w * .38, h * .86, w * .57, h * .7);
+        x.bezierCurveTo(w * .75, h * .56, w * .88, h * .8, w, h * .64);
+        x.lineTo(w, h); x.lineTo(0, h); x.closePath(); x.fill();
+
+        /* subtle analogue grain and edge falloff */
+        for (let i = 0; i < 1800; i++) {
+          const a = .015 + (i % 7) * .004;
+          x.fillStyle = `rgba(255,245,225,${a})`;
+          x.fillRect((i * 977) % w, (i * 613) % h, 1.2, 1.2);
+        }
+        const vignette = x.createRadialGradient(w / 2, h / 2, h * .2, w / 2, h / 2, w * .7);
+        vignette.addColorStop(0, "rgba(0,0,0,0)");
+        vignette.addColorStop(1, "rgba(18,10,5,.38)");
+        x.fillStyle = vignette; x.fillRect(0, 0, w, h);
+      }
+
       const BOOKS = [
         {
-          id: "money",
-          title: "The Psychology of Money",
-          author: "Morgan Housel",
-          year: "2020",
-          stars: 4,
-          desc: "The Psychology of Money is a set of nineteen short stories about how people actually behave around wealth, greed, risk, and happiness. Morgan Housel makes the case that doing well with money depends far less on intelligence than on temperament, patience, and the stories we tell ourselves.",
-          front: paintMoney,
-          edge: "#e4ead9",
-          backBg: "#4cb960",
-          backInk: "13,17,23",
-          spineBg: "#4cb960",
-          spineInk: "#ffffff",
-          spineFont: "700 42px Georgia",
-          /* buybooksindia's CDN sends no Access-Control-Allow-Origin, so this
-             cover is served from public/ instead of hotlinked */
-          coverURL: "/covers/psychology-of-money.jpg",
+          id: "sunny-day",
+          title: "奔向晴天",
+          author: "草地 · 夏日收藏",
+          year: "24 张照片",
+          stars: 5,
+          desc: "迎着午后的阳光跑过草地，卷起的小尾巴和笑脸都被镜头留了下来。",
+          front: paintAlbum,
+          edge: "#f6ead3", backBg: "#e98d73", backInk: "255,248,235",
+          spineBg: "#e98d73", spineInk: "#fff8eb", spineFont: "700 38px Georgia",
+          photoA: ["#f6b46d", "#e86b62"], photoB: ["#3f9eaa", "#a9d5c8"], photoC: ["#efcf9b", "#d77a67"],
+          coverURL: "/shiba-meadow.png",
         },
         {
-          id: "alchemist",
-          title: "The Alchemist",
-          author: "Paulo Coelho",
-          year: "1988",
+          id: "city",
+          title: "雨夜散步",
+          author: "上海 · 蓝调时刻",
+          year: "18 张照片",
           stars: 4,
-          desc: "The Alchemist follows Santiago, an Andalusian shepherd boy who leaves his flock to chase a recurring dream of treasure in the Egyptian pyramids. Paulo Coelho turns the journey into a fable about listening to your heart, reading the omens along the way, and the price of abandoning your own Personal Legend.",
-          front: paintAlchemist,
-          edge: "#e9dcbc",
-          backBg: "#af2024",
-          backInk: "252,232,196",
-          spineBg: "#af2024",
-          spineInk: "#f2b31c",
-          spineFont: "700 44px Georgia",
-          coverURL:
-            "https://m.media-amazon.com/images/I/81ioPZFMeUL._UF1000,1000_QL80_.jpg",
+          desc: "雨后的街灯映在路面，小家伙站在屋檐下，好奇地看着刚刚安静下来的城市。",
+          front: paintAlbum,
+          edge: "#e7e1f0", backBg: "#62629b", backInk: "245,242,255",
+          spineBg: "#62629b", spineInk: "#f7f1ff", spineFont: "700 38px Georgia",
+          photoA: ["#312d55", "#7c6fbe"], photoB: ["#d0657e", "#f0a071"], photoC: ["#1d5472", "#79b6bc"],
+          coverURL: "/shiba-rainy-night.png",
         },
         {
-          id: "borncrime",
-          title: "Born a Crime",
-          author: "Trevor Noah",
-          year: "2016",
-          stars: 4,
-          desc: "Born a Crime is Trevor Noah's memoir of growing up mixed-race in apartheid South Africa, where his very existence was illegal. Eighteen stories move between poverty, violence, and absurd comedy, held together by his mother's fierce, funny, unbreakable love.",
-          front: paintBornACrime,
-          edge: "#dce9e6",
-          backBg: "#07b1cb",
-          backInk: "255,255,255",
-          spineBg: "#07b1cb",
-          spineInk: "#f6e400",
-          spineFont: "700 44px Arial",
-          coverURL:
-            "https://m.media-amazon.com/images/I/81fh8hPklHL._AC_UF1000,1000_QL80_.jpg",
+          id: "home",
+          title: "午后小憩",
+          author: "家中 · 温暖日常",
+          year: "31 张照片",
+          stars: 5,
+          desc: "阳光落在亚麻沙发上，它抱着熟悉的蓝色兔子，睡成一个暖乎乎的小圆圈。",
+          front: paintAlbum,
+          edge: "#dbece8", backBg: "#4d9c91", backInk: "241,255,250",
+          spineBg: "#4d9c91", spineInk: "#f0fff8", spineFont: "700 38px Georgia",
+          photoA: ["#e3a66e", "#d86e70"], photoB: ["#8fbf9e", "#3c7b79"], photoC: ["#f3ddad", "#bd8175"],
+          coverURL: "/shiba-sunny-nap.png",
         },
       ];
 
       /* =========================================================================
-   4. Book construction
+   4. Floating photo-frame construction
    ========================================================================= */
-      const W = 1.42,
-        H = 2.14,
-        T = 0.34,
-        CT = 0.032,
-        OV = 0.05;
+      const W = 2.05,
+        H = 1.52,
+        T = 0.12,
+        CT = 0.065,
+        OV = 0.04;
       const PAGE_N = 12,
         PW = W - 0.02,
         PH = H - 0.02;
-      const BLOCK_D = 0.245,
-        BLOCK_Z = -0.0205,
+      const BLOCK_D = 0.08,
+        BLOCK_Z = -0.02,
         PIVOT_Z = T / 2 + CT / 2,
         BPIVOT_Z = -(T / 2 + CT / 2);
 
@@ -1358,7 +1457,7 @@
         H + OV * 2,
         T + CT * 2 + 0.006,
       );
-      const hitGeo = new THREE.BoxGeometry(1.8, 2.5, 1.15);
+      const hitGeo = new THREE.BoxGeometry(2.35, 1.8, 0.7);
       const blobGeo = new THREE.PlaneGeometry(1, 1);
       const hitMat = new THREE.MeshBasicMaterial({ visible: false });
 
@@ -1411,10 +1510,10 @@
         bookRoot.add(root);
 
         /* painted textures */
-        const fc = mkCanvas(1024, 1536);
-        cfg.front(fc.getContext("2d"), 1024, 1536);
-        const bc = mkCanvas(1024, 1536);
-        paintBack(bc.getContext("2d"), 1024, 1536, cfg);
+        const fc = mkCanvas(1400, 1000);
+        cfg.front(fc.getContext("2d"), 1400, 1000, cfg);
+        const bc = mkCanvas(1400, 1000);
+        paintBack(bc.getContext("2d"), 1400, 1000, cfg);
         const sc = mkCanvas(220, 1536);
         paintSpine(sc.getContext("2d"), 220, 1536, cfg);
         const frontTex = tex(fc),
@@ -1459,6 +1558,17 @@
             (t) => {
               t.encoding = THREE.sRGBEncoding;
               t.anisotropy = ANISO;
+              /* Preserve portrait proportions inside the landscape frame by
+                 cropping vertically around the face instead of stretching. */
+              if (t.image && t.image.width && t.image.height) {
+                const imageAspect = t.image.width / t.image.height;
+                const frameAspect = W / H;
+                if (imageAspect < frameAspect) {
+                  const visibleY = imageAspect / frameAspect;
+                  t.repeat.set(1, visibleY);
+                  t.offset.set(0, (1 - visibleY) * 0.58);
+                }
+              }
               mFront.map = t;
               mFront.needsUpdate = true;
             },
@@ -1471,7 +1581,7 @@
           );
         }
 
-        /* back cover, hinged at the spine, opens away from the block */
+        /* Compatibility group retained for the existing orbit state machine. */
         const backPivot = new THREE.Group();
         backPivot.position.set(-W / 2, 0, BPIVOT_Z);
         const backMesh = new THREE.Mesh(coverGeo, [
@@ -1485,9 +1595,10 @@
         backMesh.position.x = (W + OV) / 2;
         backMesh.castShadow = backMesh.receiveShadow = true;
         backPivot.add(backMesh);
+        backPivot.visible = false;
         float.add(backPivot);
 
-        /* front cover, hinged at the spine */
+        /* Main framed photograph panel. */
         const pivot = new THREE.Group();
         pivot.position.set(-W / 2, 0, PIVOT_Z);
         const frontMesh = new THREE.Mesh(coverGeo, [
@@ -1496,11 +1607,117 @@
           mEdge,
           mEdge,
           mFront,
-          endpaperMat,
+          mBack,
         ]);
         frontMesh.position.x = (W + OV) / 2;
         frontMesh.castShadow = frontMesh.receiveShadow = true;
         pivot.add(frontMesh);
+
+        /* A physical framed print lifts each album from a flat book cover.
+           The rails sit in front of the board, with an inset print and glass. */
+        const frameStyle = [
+          {
+            kind: "walnut", rail: 0.14, depth: 0.2, inset: 0.085,
+            outer: { color: 0xffffff, map: woodGrainTex, bumpMap: woodGrainTex, bumpScale: 0.014, roughness: 0.45, metalness: 0.02 },
+            inner: { color: 0xb68b43, roughness: 0.2, metalness: 0.72 },
+            mat: 0xeee4ce,
+          },
+          {
+            kind: "titanium", rail: 0.055, depth: 0.095, inset: 0.038,
+            outer: { color: 0x17191c, roughness: 0.2, metalness: 0.78 },
+            inner: { color: 0xb76048, roughness: 0.26, metalness: 0.66 },
+            mat: 0x23262a,
+          },
+          {
+            kind: "oak", rail: 0.18, depth: 0.135, inset: 0.12,
+            outer: { color: 0xd0a978, bumpMap: woodGrainTex, bumpScale: 0.009, roughness: 0.72, metalness: 0.01 },
+            inner: { color: 0x73806a, roughness: 0.5, metalness: 0.16 },
+            mat: 0xd9d0bb,
+          },
+        ][index];
+        const frameWood = std(Object.assign({ envMapIntensity: 0.72 }, frameStyle.outer));
+        const frameGold = std(Object.assign({ envMapIntensity: 1 }, frameStyle.inner));
+        const matBoard = std({ color: frameStyle.mat, roughness: 0.97, envMapIntensity: 0.1 });
+        const railZ = CT / 2 + frameStyle.depth * 0.46;
+        const frameW = W * (index === 1 ? 0.95 : index === 2 ? 0.9 : 0.92);
+        const frameH = H * (index === 1 ? 0.91 : index === 2 ? 0.82 : 0.86);
+        const rail = frameStyle.rail;
+        const frameX = W / 2, frameY = 0;
+        [
+          [frameW + rail * 2, rail, frameX, frameY + frameH / 2],
+          [frameW + rail * 2, rail, frameX, frameY - frameH / 2],
+          [rail, frameH, frameX - frameW / 2, frameY],
+          [rail, frameH, frameX + frameW / 2, frameY],
+        ].forEach(([rw, rh, rx, ry]) => {
+          const railMesh = new THREE.Mesh(new THREE.BoxGeometry(rw, rh, frameStyle.depth), frameWood);
+          railMesh.position.set(rx, ry, railZ);
+          railMesh.castShadow = railMesh.receiveShadow = true;
+          pivot.add(railMesh);
+        });
+        const matW = frameW - rail * 1.15, matH = frameH - rail * 1.15, mat = frameStyle.inset;
+        [
+          [matW, mat, frameX, frameY + matH / 2],
+          [matW, mat, frameX, frameY - matH / 2],
+          [mat, matH, frameX - matW / 2, frameY],
+          [mat, matH, frameX + matW / 2, frameY],
+        ].forEach(([rw, rh, rx, ry]) => {
+          const matRail = new THREE.Mesh(new THREE.BoxGeometry(rw, rh, 0.045), matBoard);
+          matRail.position.set(rx, ry, railZ + 0.035);
+          matRail.receiveShadow = true;
+          pivot.add(matRail);
+        });
+        const lipW = matW - mat * 1.05, lipH = matH - mat * 1.05, lip = 0.024;
+        [
+          [lipW, lip, frameX, frameY + lipH / 2],
+          [lipW, lip, frameX, frameY - lipH / 2],
+          [lip, lipH, frameX - lipW / 2, frameY],
+          [lip, lipH, frameX + lipW / 2, frameY],
+        ].forEach(([rw, rh, rx, ry]) => {
+          const goldLip = new THREE.Mesh(new THREE.BoxGeometry(rw, rh, 0.04), frameGold);
+          goldLip.position.set(rx, ry, railZ + 0.065);
+          pivot.add(goldLip);
+        });
+        if (frameStyle.kind === "titanium") {
+          const boltMat = std({ color: 0xc8cdd2, roughness: 0.18, metalness: 0.9 });
+          [
+            [frameX - frameW / 2, frameY - frameH / 2],
+            [frameX + frameW / 2, frameY - frameH / 2],
+            [frameX - frameW / 2, frameY + frameH / 2],
+            [frameX + frameW / 2, frameY + frameH / 2],
+          ].forEach(([bx, by]) => {
+            const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.022, 18), boltMat);
+            bolt.rotation.x = Math.PI / 2;
+            bolt.position.set(bx, by, railZ + frameStyle.depth / 2 + 0.016);
+            pivot.add(bolt);
+          });
+        }
+        if (frameStyle.kind === "oak") {
+          const pegMat = std({ color: 0x9b724d, roughness: 0.78 });
+          [-1, 1].forEach((side) => {
+            const peg = new THREE.Mesh(new THREE.SphereGeometry(0.055, 18, 12), pegMat);
+            peg.position.set(frameX + side * (frameW / 2 + rail * 0.48), frameY, railZ + 0.085);
+            pivot.add(peg);
+          });
+        }
+        const glass = new THREE.Mesh(
+          new THREE.PlaneGeometry(frameW - rail * 0.35, frameH - rail * 0.35),
+          new THREE.MeshPhysicalMaterial({
+            color: 0xe7f3ff, transparent: true, opacity: 0.16,
+            roughness: 0.025, metalness: 0.08, side: THREE.DoubleSide,
+          }),
+        );
+        glass.position.set(frameX, frameY, railZ + 0.082);
+        pivot.add(glass);
+
+        /* Rear kickstand makes the object read as a frame from every angle. */
+        const stand = new THREE.Mesh(
+          new THREE.BoxGeometry(0.18, H * 0.72, 0.09),
+          frameWood,
+        );
+        stand.position.set(frameX, -H * 0.18, -0.13);
+        stand.rotation.x = -0.28;
+        stand.castShadow = true;
+        pivot.add(stand);
         float.add(pivot);
 
         /* cloth spine */
@@ -1508,6 +1725,7 @@
         spine.position.set(-W / 2 - 0.013, 0, 0);
         spine.castShadow = true;
         float.add(spine);
+        spine.visible = false;
 
         /* page block with striated edges */
         const block = new THREE.Mesh(blockGeo, [
@@ -1521,6 +1739,7 @@
         block.position.set(-0.0075, 0, BLOCK_Z);
         block.castShadow = block.receiveShadow = true;
         float.add(block);
+        block.visible = false;
 
         /* individually hinged top sheets */
         const pages = [],
@@ -1537,6 +1756,7 @@
           pm.rotation.z = (Math.random() - 0.5) * 0.006;
           pp.add(pm);
           float.add(pp);
+          pp.visible = false;
           pages.push(pp);
           pageF.push(0.3 * Math.pow(1 - i / PAGE_N, 2.6));
         }
@@ -1556,6 +1776,7 @@
           pm.rotation.z = (Math.random() - 0.5) * 0.006;
           pp.add(pm);
           float.add(pp);
+          pp.visible = false;
           pagesB.push(pp);
           pageFB.push(0.3 * Math.pow(1 - i / 6, 2.6));
         }
@@ -1621,6 +1842,8 @@
           orbPhase: "idle",
           orbTarget: 0,
           orbXs: new Spring(0, 60, 12),
+          tableVX: 0,
+          tableVZ: 0,
           exit: null,
         };
         books.push(b);
@@ -1722,12 +1945,13 @@
    ========================================================================= */
       const state = {
         mode: "hero",
+        collectionMode: false,
         selected: null,
         hovered: null,
         pillLock: null,
         kbIndex: -1,
       };
-      const SLOTS = { hero: [], detail: null, portrait: false };
+      const SLOTS = { hero: [], collection: [], detail: null, portrait: false };
 
       function computeSlots() {
         const a = window.innerWidth / Math.max(1, window.innerHeight);
@@ -1736,17 +1960,28 @@
         bookRoot.position.y = -(1 - fit) * 0.55;
         SLOTS.portrait = a < 0.85;
 
-        /* hero: tight fan, center book dominant, tops at ~30vh / ~53vh like the reference */
+        /* hero: a floating gallery wall of three landscape photo frames */
         SLOTS.hero = SLOTS.portrait
           ? [
-              { p: [-1.36, -1.0, -0.12], r: [-0.045, 0.4, 0.185], s: 1.39 },
-              { p: [0.2, -0.45, 0.6], r: [-0.05, -0.1, -0.035], s: 1.52 },
-              { p: [1.62, -1.1, -0.34], r: [-0.045, -0.42, -0.17], s: 1.39 },
+              { p: [-1.15, -0.92, -0.15], r: [-0.06, 0.34, 0.13], s: 1.08 },
+              { p: [0.12, -0.18, 0.65], r: [-0.04, -0.06, -0.025], s: 1.18 },
+              { p: [1.35, -1.0, -0.28], r: [-0.04, -0.34, -0.12], s: 1.08 },
             ]
           : [
-              { p: [-2.06, -1.23, -0.12], r: [-0.045, 0.4, 0.185], s: 1.39 },
-              { p: [0.3, -1.08, 0.6], r: [-0.05, -0.1, -0.035], s: 1.52 },
-              { p: [2.45, -1.41, -0.34], r: [-0.045, -0.42, -0.17], s: 1.39 },
+              { p: [-2.35, -0.72, -0.12], r: [-0.08, 0.38, 0.11], s: 1.16 },
+              { p: [0.05, -0.42, 0.62], r: [-0.05, -0.05, -0.02], s: 1.28 },
+              { p: [2.35, -0.78, -0.25], r: [-0.06, -0.38, -0.1], s: 1.16 },
+            ];
+        SLOTS.collection = SLOTS.portrait
+          ? [
+              { p: [-1.05, -1.3, 0.65], r: [-1.18, 0.08, -0.28], s: .92 },
+              { p: [0.18, -1.22, -0.15], r: [-1.2, -0.06, 0.18], s: .98 },
+              { p: [1.2, -1.28, 0.78], r: [-1.16, 0.1, -0.12], s: .9 },
+            ]
+          : [
+              { p: [-2.0, -1.28, 0.65], r: [-1.2, 0.06, -0.24], s: 1.0 },
+              { p: [0.05, -1.18, -0.35], r: [-1.22, -0.04, 0.16], s: 1.06 },
+              { p: [2.0, -1.3, 0.72], r: [-1.18, 0.08, -0.11], s: .98 },
             ];
 
         if (SLOTS.portrait) {
@@ -1778,8 +2013,8 @@
         } else {
           SLOTS.detail = {
             p: [-1.95, 0.0, 1.1],
-            r: [0.02, -0.52, 0.1],
-            s: 1.26,
+            r: [0.02, -0.28, 0.04],
+            s: 1.38,
           };
         }
       }
@@ -1873,17 +2108,19 @@
 
       function bringBack(b, i, delay) {
         const here = b.springs.py.v;
+        const homeSlot = (state.collectionMode ? SLOTS.collection : SLOTS.hero)[i];
         b.root.visible = true;
         pinInPlace(b);
         playY(b, [
           { d: delay, from: here, to: here, ease: EASE.hold },
-          { d: 1.0, from: here, to: SLOTS.hero[i].p[1], ease: EASE.outQuint },
+          { d: 1.0, from: here, to: homeSlot.p[1], ease: EASE.outQuint },
         ]);
       }
 
       function applyMode() {
         if (state.mode === "hero" || state.mode === "closing") {
-          books.forEach((b, i) => setTargets(b, SLOTS.hero[i]));
+          const slots = state.collectionMode ? SLOTS.collection : SLOTS.hero;
+          books.forEach((b, i) => setTargets(b, slots[i]));
         } else if (state.selected) {
           /* only the open book is retargeted; the other two keep the x, z and
              rotation they stood at while their y is tween-driven */
@@ -1903,11 +2140,19 @@
       function camTo(mode) {
         if (mode === "detail") {
           camX.t = SLOTS.portrait ? 0 : -0.4;
+          camY.t = 0.1;
           camZ.t = SLOTS.portrait ? 9.9 : 8.9;
           lookX.t = SLOTS.portrait ? 0 : -0.5;
           lookY.t = SLOTS.portrait ? 0 : 0.15;
+        } else if (mode === "collection") {
+          camX.t = 0;
+          camY.t = SLOTS.portrait ? 3.4 : 4.2;
+          camZ.t = SLOTS.portrait ? 8.8 : 8.1;
+          lookX.t = 0;
+          lookY.t = -1.15;
         } else {
           camX.t = 0;
+          camY.t = 0.1;
           camZ.t = 9.6;
           lookX.t = 0;
           lookY.t = 0;
@@ -1950,6 +2195,8 @@
         hidePill();
         book.exit = null; /* hand y back to the spring if it was still tweening */
         document.body.classList.add("transit");
+        tableRoot.visible = false;
+        portraitAvatar.visible = false;
         populatePanel(book.cfg);
         computeSlots();
 
@@ -1985,6 +2232,7 @@
         if (state.mode !== "detail") return;
         state.mode = "closing";
         document.body.classList.remove("detail-open");
+        portraitAvatar.visible = false;
         leaves.deactivate();
         orbit.drag = false;
         const b = state.selected;
@@ -1997,8 +2245,9 @@
         }
         setTimeout(() => {
           document.body.classList.remove("transit");
+          tableRoot.visible = state.collectionMode;
           applyMode();
-          camTo("hero");
+          camTo(state.collectionMode ? "collection" : "hero");
           /* and they only climb back once the frame has finished returning */
           let back = 0;
           books.forEach((bk, i) => {
@@ -2014,6 +2263,80 @@
       }
 
       document.getElementById("closeBtn").addEventListener("click", close);
+      document.getElementById("collectionBtn").addEventListener("click", (e) => {
+        if (state.mode !== "hero") return;
+        state.collectionMode = !state.collectionMode;
+        e.currentTarget.textContent = state.collectionMode ? "返回展厅" : "我的收藏";
+        tableRoot.visible = state.collectionMode;
+        document.body.classList.toggle("table-mode", state.collectionMode);
+        applyMode();
+        camTo(state.collectionMode ? "collection" : "hero");
+      });
+      document.querySelectorAll("#timeline button").forEach((btn) => {
+        btn.addEventListener("click", () => open(books[Number(btn.dataset.album)]));
+      });
+      window.addEventListener("dblclick", (e) => {
+        if (state.mode !== "hero") return;
+        for (let i = 0; i < 5; i++) {
+          const paw = document.createElement("span");
+          paw.className = "paw-print"; paw.textContent = "🐾";
+          paw.style.left = e.clientX + (i - 2) * 35 + "px";
+          paw.style.top = e.clientY + (i % 2) * 22 + "px";
+          paw.style.animationDelay = i * .08 + "s";
+          document.body.appendChild(paw); setTimeout(() => paw.remove(), 2300);
+        }
+      });
+
+      const uploadInput = document.getElementById("photoUpload");
+      const toast = document.getElementById("toast");
+      function showToast(message) { toast.textContent = message; toast.classList.add("on"); clearTimeout(showToast.timer); showToast.timer = setTimeout(() => toast.classList.remove("on"), 1800); }
+      document.getElementById("uploadBtn").addEventListener("click", () => uploadInput.click());
+      uploadInput.addEventListener("change", () => {
+        const file = uploadInput.files && uploadInput.files[0]; if (!file) return;
+        const url = URL.createObjectURL(file);
+        new THREE.TextureLoader().load(url, (t) => {
+          t.encoding = THREE.sRGBEncoding; t.anisotropy = ANISO;
+          const target = state.selected || state.hovered || books[0];
+          target.frontMesh.material[4].map = t; target.frontMesh.material[4].needsUpdate = true;
+          target.cfg.title = file.name.replace(/\.[^.]+$/, "");
+          showToast("照片已自动装入相框");
+          URL.revokeObjectURL(url);
+        });
+      });
+      function playMemorySound() {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        const ac = new AC(), gain = ac.createGain(), osc = ac.createOscillator();
+        osc.type = "sine"; osc.frequency.setValueAtTime(392, ac.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(587, ac.currentTime + 1.2);
+        gain.gain.setValueAtTime(.0001, ac.currentTime);
+        gain.gain.exponentialRampToValueAtTime(.08, ac.currentTime + .12);
+        gain.gain.exponentialRampToValueAtTime(.0001, ac.currentTime + 1.6);
+        osc.connect(gain).connect(ac.destination); osc.start(); osc.stop(ac.currentTime + 1.7);
+        showToast("正在播放回忆声音 ♪");
+      }
+      document.getElementById("memorySound").addEventListener("click", playMemorySound);
+      document.getElementById("exportCard").addEventListener("click", () => {
+        if (!state.selected) return;
+        const cfg = state.selected.cfg, c = document.createElement("canvas");
+        c.width = 1080; c.height = 1440; const x = c.getContext("2d");
+        x.fillStyle = "#efe5d1"; x.fillRect(0, 0, c.width, c.height);
+        const img = new Image(); img.onload = () => {
+          const box = { x: 90, y: 110, w: 900, h: 820 };
+          const scale = Math.max(box.w / img.width, box.h / img.height);
+          const sw = box.w / scale, sh = box.h / scale;
+          x.drawImage(img, (img.width - sw) / 2, (img.height - sh) / 2, sw, sh, box.x, box.y, box.w, box.h);
+          x.strokeStyle = "#5b3c25"; x.lineWidth = 26; x.strokeRect(box.x, box.y, box.w, box.h);
+          x.fillStyle = "#34251b"; x.font = "700 66px Georgia"; x.fillText(cfg.title, 90, 1050);
+          x.font = "36px Georgia"; x.fillStyle = "#765a43"; x.fillText(cfg.author + " · " + cfg.year, 90, 1120);
+          x.font = "32px sans-serif"; x.fillStyle = "#4a392d";
+          x.fillText(cfg.desc.slice(0, 30), 90, 1210); x.fillText(cfg.desc.slice(30, 60), 90, 1260);
+          x.fillStyle = "#9c7448"; x.font = "34px sans-serif"; x.fillText("🐾 MEMORIES", 90, 1360);
+          const a = document.createElement("a"); a.download = cfg.title + "-纪念卡.png"; a.href = c.toDataURL("image/png"); a.click();
+          showToast("纪念卡已生成并保存");
+        };
+        img.src = cfg.coverURL;
+      });
       /* the slip is never a hit target — clicking the book under it opens it,
          which is also what keeps it able to follow the cursor */
 
@@ -2067,11 +2390,20 @@
         if (state.mode === "detail") leaves.push(dxN, dyN);
         if (ptr.down && dragBook) {
           ptr.moved += Math.abs(dxN * innerWidth) + Math.abs(dyN * innerHeight);
-          dragBook.springs.drag.t = clamp(
-            ((ptr.downX - e.clientX) / innerWidth) * 3.4,
-            0,
-            1.0,
-          );
+          if (state.collectionMode) {
+            dragBook.springs.px.t = clamp(dragBook.springs.px.t + dxN * 9, -3.4, 3.4);
+            dragBook.springs.pz.t = clamp(dragBook.springs.pz.t + dyN * 7, -1.7, 1.8);
+            dragBook.springs.py.t = -1.05;
+            dragBook.springs.rz.t += dxN * .9;
+            dragBook.tableVX = dxN * 28;
+            dragBook.tableVZ = dyN * 22;
+          } else {
+            dragBook.springs.drag.t = clamp(
+              ((ptr.downX - e.clientX) / innerWidth) * 3.4,
+              0,
+              1.0,
+            );
+          }
         }
         if (ptr.down && orbit.drag) {
           orbit.dxAcc += dxN;
@@ -2102,6 +2434,10 @@
           ptr.downY = e.clientY;
           ptr.moved = 0;
           ptr.t0 = performance.now();
+          if (state.collectionMode) {
+            rayBook.springs.py.t = -1.05;
+            rayBook.tableVX = rayBook.tableVZ = 0;
+          }
           canvas.setPointerCapture(e.pointerId);
         } else if (state.mode === "detail" && rayBook === state.selected) {
           ptr.down = true;
@@ -2128,6 +2464,7 @@
           const limit = isTouch() ? 650 : 450;
           const wasDrag = ptr.moved > slop;
           dragBook.springs.drag.t = 0;
+          if (state.collectionMode) dragBook.springs.py.t = -1.25;
           if (
             !wasDrag &&
             state.mode === "hero" &&
@@ -2303,6 +2640,15 @@
         s.cover.t = coverBase + fan;
         s.coverB.t = coverBBase + fanB;
         s.sc.t = b.slotScale * (isHov && state.mode === "hero" ? 1.09 : 1);
+        if (state.collectionMode && dragBook !== b) {
+          s.px.t = clamp(s.px.t + b.tableVX * dt, -3.4, 3.4);
+          s.pz.t = clamp(s.pz.t + b.tableVZ * dt, -1.7, 1.8);
+          s.rz.t += b.tableVX * dt * .035;
+          b.tableVX *= Math.exp(-3.2 * dt);
+          b.tableVZ *= Math.exp(-3.2 * dt);
+          if (Math.abs(b.tableVX) < .01) b.tableVX = 0;
+          if (Math.abs(b.tableVZ) < .01) b.tableVZ = 0;
+        }
 
         s.px.update(dt);
         if (b.exit) stepY(b, dt);
@@ -2334,8 +2680,9 @@
         );
         b.root.scale.setScalar(Math.max(s.sc.v, 0.001));
 
-        const ang = Math.max(0, s.cover.v + s.drag.v);
-        const angB = Math.max(0, s.coverB.v);
+        /* Photo frames tilt and orbit as a solid object; they never open like books. */
+        const ang = 0;
+        const angB = 0;
         b.pivot.rotation.y = -ang;
         b.pivot.position.z = PIVOT_Z + ang * 0.022;
         b.backPivot.rotation.y = angB;
@@ -2382,6 +2729,10 @@
         books.forEach((b) => screenPos(b));
         books.forEach((b) => tickBook(b, dt, t));
         leaves.update(dt, t);
+        if (portraitAvatar.visible && !RM) {
+          portraitAvatar.rotation.y = Math.sin(t * 0.8) * 0.08 - 0.12;
+          portraitAvatar.position.y = -0.42 + Math.sin(t * 1.25) * 0.035;
+        }
 
         /* scene parallax */
         parX.t = RM ? 0 : ptr.ndcX * 0.02;
@@ -2449,7 +2800,7 @@
         camTo(
           state.mode === "detail" || state.mode === "opening"
             ? "detail"
-            : "hero",
+            : state.collectionMode ? "collection" : "hero",
         );
       }
 

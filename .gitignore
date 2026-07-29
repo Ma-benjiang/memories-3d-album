@@ -9,6 +9,12 @@ lerna-debug.log*
 
 node_modules
 dist
+.DS_Store
+
+# Local/private source material not used by the published demo
+public/portrait.jpeg
+public/shanghai-rainy-night.png
+public/warm-home-morning.png
 dist-ssr
 *.local
 
