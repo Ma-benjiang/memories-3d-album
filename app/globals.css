@@ -268,6 +268,86 @@ button:disabled {
   transform: rotate(-1.5deg);
 }
 
+.opening-slip {
+  position: fixed;
+  z-index: 72;
+  top: 0;
+  left: 0;
+  display: grid;
+  min-width: 158px;
+  gap: 3px;
+  padding: 15px 22px 17px;
+  border: 1px solid rgba(101, 72, 43, 0.2);
+  clip-path: polygon(
+    1% 6%,
+    8% 2%,
+    18% 5%,
+    29% 1%,
+    42% 4%,
+    54% 1%,
+    66% 5%,
+    79% 2%,
+    91% 5%,
+    99% 2%,
+    97% 94%,
+    87% 98%,
+    74% 94%,
+    61% 99%,
+    48% 95%,
+    34% 98%,
+    21% 94%,
+    9% 98%,
+    2% 93%
+  );
+  background:
+    repeating-linear-gradient(93deg, rgba(91, 67, 43, 0.032) 0 1px, transparent 1px 6px),
+    linear-gradient(145deg, #fff8e9, #e8d7b7);
+  box-shadow:
+    0 3px 0 #c8b28c,
+    0 18px 35px rgba(0, 0, 0, 0.34),
+    inset 0 1px rgba(255, 255, 255, 0.8);
+  color: #3d2b20;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+  animation: opening-slip-fly 1.7s cubic-bezier(0.18, 0.72, 0.2, 1) both;
+}
+
+.opening-slip span {
+  color: #a36e46;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.18em;
+}
+
+.opening-slip strong {
+  font-family: "Songti SC", "STSong", Georgia, serif;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+@keyframes opening-slip-fly {
+  0% {
+    opacity: 0;
+    transform: translate3d(var(--slip-x), var(--slip-y), 0) rotate(-9deg) scale(0.72);
+  }
+  14% {
+    opacity: 1;
+  }
+  42% {
+    opacity: 1;
+    transform: translate3d(calc(var(--slip-x) - 35px), calc(var(--slip-y) - 70px), 0)
+      rotate(4deg) scale(1.04);
+  }
+  72% {
+    opacity: 0.94;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(calc(var(--slip-x) + 105px), calc(var(--slip-y) - 205px), 0)
+      rotate(22deg) scale(0.84);
+  }
+}
+
 .gallery-controls > button {
   min-width: 46px;
   min-height: 46px;

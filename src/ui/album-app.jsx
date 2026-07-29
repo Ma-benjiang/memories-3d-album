@@ -428,6 +428,7 @@ export default function AlbumApp() {
   const [pawRun, setPawRun] = useState(null);
   const [droppedId, setDroppedId] = useState(null);
   const [hoverCue, setHoverCue] = useState(null);
+  const [openingCue, setOpeningCue] = useState(null);
   const [detailPanelReady, setDetailPanelReady] = useState(false);
   const fileInputRef = useRef(null);
   const blankClicksRef = useRef([]);
@@ -460,6 +461,12 @@ export default function AlbumApp() {
     const timer = setTimeout(() => setToast(""), 2600);
     return () => clearTimeout(timer);
   }, [toast]);
+
+  useEffect(() => {
+    if (!openingCue) return;
+    const timer = setTimeout(() => setOpeningCue(null), 1750);
+    return () => clearTimeout(timer);
+  }, [openingCue]);
 
   useEffect(() => {
     if (view !== "detail" || !selectedId) {
@@ -513,6 +520,13 @@ export default function AlbumApp() {
   const showToast = (message) => setToast(message);
 
   const openMemory = (id) => {
+    const memory = memoryMap.get(id);
+    setOpeningCue({
+      id: `${id}-${Date.now()}`,
+      title: memory?.title || "这段回忆",
+      x: hoverCue?.x ?? window.innerWidth * 0.5,
+      y: hoverCue?.y ?? window.innerHeight * 0.58,
+    });
     setHoverCue(null);
     setSelectedId(id);
     setView("detail");
@@ -722,6 +736,21 @@ export default function AlbumApp() {
           style={{ left: hoverCue.x + 18, top: hoverCue.y + 18 }}
         >
           翻阅这段回忆
+        </div>
+      )}
+
+      {openingCue && (
+        <div
+          className="opening-slip"
+          data-testid="opening-slip"
+          key={openingCue.id}
+          style={{
+            "--slip-x": `${openingCue.x}px`,
+            "--slip-y": `${openingCue.y}px`,
+          }}
+        >
+          <span>OPEN MEMORY</span>
+          <strong>{openingCue.title}</strong>
         </div>
       )}
 

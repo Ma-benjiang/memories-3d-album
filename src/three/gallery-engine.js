@@ -313,28 +313,33 @@ export function createGalleryEngine(
   scene.add(wallShadow);
 
   const leaves = new THREE.Group();
-  const leafPalette = [0x8a5941, 0xb37a55, 0xc79b6c, 0x6d7653];
-  for (let index = 0; index < 34; index += 1) {
+  const leafPalette = [0xf4ead7, 0xe0b56a, 0xc97962, 0x91a076, 0xd7c09a];
+  for (let index = 0; index < 52; index += 1) {
+    const angle = (index / 52) * Math.PI * 2 + (index % 5) * 0.12;
     const leaf = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.09 + (index % 4) * 0.018, 0.16 + (index % 3) * 0.02),
-      makeMaterial({
+      new THREE.PlaneGeometry(0.1 + (index % 4) * 0.025, 0.14 + (index % 3) * 0.035),
+      new THREE.MeshBasicMaterial({
         color: leafPalette[index % leafPalette.length],
-        roughness: 0.92,
         side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
       }),
     );
-    const angle = (index / 34) * Math.PI * 2;
-    leaf.position.set(Math.cos(angle) * (2.2 + (index % 5) * 0.22), -1.8 + (index % 9) * 0.48, -0.6);
+    leaf.position.set(0, 0, 0.4);
     leaf.rotation.set(index * 0.31, index * 0.47, angle);
+    leaf.renderOrder = 8;
     leaf.userData = {
-      origin: leaf.position.clone(),
+      angle,
+      radius: 0.48 + (index % 7) * 0.055,
+      lift: -0.55 + (index % 11) * 0.11,
       phase: index * 0.57,
-      speed: 0.35 + (index % 6) * 0.06,
+      speed: 0.72 + (index % 6) * 0.09,
     };
     leaves.add(leaf);
   }
   leaves.visible = false;
-  scene.add(leaves);
+  root.add(leaves);
 
   const woodGrainTexture = makeWoodGrainTexture();
   const frameWoodTexture = woodGrainTexture.clone();
@@ -371,6 +376,7 @@ export function createGalleryEngine(
   let selectedId = null;
   let focusIndex = 1;
   let transition = null;
+  let particleBurst = null;
   let hoveredId = null;
   let frames = [];
   let disposed = false;
@@ -829,6 +835,7 @@ export function createGalleryEngine(
     if (nextMode === "detail" && mode !== "detail" && mode !== "opening") {
       mode = "opening";
       transition = { type: "opening", elapsed: 0, phase: "clear" };
+      particleBurst = null;
       const chosen = frames.find((frame) => frame.id === selectedId);
       let exitIndex = 0;
       frames.forEach((frame) => {
@@ -847,6 +854,7 @@ export function createGalleryEngine(
     ) {
       mode = "closing";
       transition = { type: "closing", elapsed: 0, destination: nextMode };
+      particleBurst = null;
       const chosen = frames.find((frame) => frame.id === selectedId);
       if (chosen) {
         chosen.forcedOrbitTarget =
@@ -1100,6 +1108,7 @@ export function createGalleryEngine(
           chosen.orbitVelocity = 3;
         }
         leaves.visible = true;
+        particleBurst = { elapsed: 0 };
         relayout();
       }
       if (transition.type === "opening" && transition.elapsed > 1.4) {
@@ -1121,17 +1130,30 @@ export function createGalleryEngine(
     }
 
     const selectedFrame = frames.find((frame) => frame.id === selectedId);
-    if (leaves.visible && selectedFrame) {
+    if (particleBurst && selectedFrame) {
+      particleBurst.elapsed += delta;
+      const burstProgress = THREE.MathUtils.clamp(particleBurst.elapsed / 1.35, 0, 1);
+      const travel = 1 - Math.pow(1 - burstProgress, 2.4);
+      const fade = 1 - THREE.MathUtils.smoothstep(burstProgress, 0.64, 1);
       leaves.position.lerp(selectedFrame.root.position, 1 - Math.exp(-5 * delta));
       leaves.children.forEach((leaf) => {
         const data = leaf.userData;
+        const radius = data.radius + travel * (1.3 + (data.phase % 0.45));
         leaf.position.x =
-          data.origin.x + Math.sin(elapsed * data.speed + data.phase) * 0.18;
+          Math.cos(data.angle) * radius + Math.sin(elapsed * data.speed + data.phase) * 0.08;
         leaf.position.y =
-          data.origin.y + Math.sin(elapsed * (data.speed + 0.2) + data.phase) * 0.22;
-        leaf.rotation.x += delta * (0.18 + data.speed);
-        leaf.rotation.y += delta * (0.25 + data.speed);
+          Math.sin(data.angle) * radius * 0.72 + data.lift * travel - travel * travel * 0.42;
+        leaf.position.z = 0.38 + (data.phase % 0.7) + Math.sin(data.angle * 2) * 0.12;
+        leaf.rotation.x += delta * (2.2 + data.speed);
+        leaf.rotation.y += delta * (2.8 + data.speed);
+        leaf.rotation.z += delta * (1.5 + data.speed);
+        leaf.material.opacity = fade * (0.74 + (data.phase % 0.26));
+        leaf.scale.setScalar(0.7 + Math.sin(Math.PI * burstProgress) * 0.45);
       });
+      if (burstProgress >= 1) {
+        leaves.visible = false;
+        particleBurst = null;
+      }
     }
 
     const spatialMode = mode === "gallery" || mode === "timeline";
@@ -1242,6 +1264,7 @@ export function createGalleryEngine(
     window.removeEventListener("pointerup", onPointerUp);
     canvas.removeEventListener("wheel", onWheel);
     frames.forEach((frame) => disposeTree(frame.root));
+    disposeTree(leaves);
     table.geometry.dispose();
     tableMaterial.dispose();
     tableEdge.geometry.dispose();
