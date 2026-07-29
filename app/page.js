@@ -1,14 +1,5 @@
-export default function HomePage() {
-  const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+import AlbumApp from "../src/ui/album-app";
 
-  return (
-    <main className="experience-shell">
-      <iframe
-        className="experience-frame"
-        src={`${basePath}/experience.html`}
-        title="Memories 3D 相册"
-        allow="autoplay"
-      />
-    </main>
-  );
+export default function HomePage() {
+  return <AlbumApp />;
 }

@@ -18,6 +18,7 @@ out
 public/portrait.jpeg
 public/shanghai-rainy-night.png
 public/warm-home-morning.png
+!public/warm-home-morning.png
 dist-ssr
 *.local
 
