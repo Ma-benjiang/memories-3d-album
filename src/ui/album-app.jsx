@@ -63,11 +63,11 @@ function ProfileModal({ profile, onSave, onClose }) {
           onSave({ name, birthDate });
         }}
       >
-        <div className="eyebrow">DOG PROFILE</div>
+        <div className="eyebrow">MEMORY PROFILE</div>
         <h2>先认识一下主角</h2>
-        <p>出生日期用于自动计算每张照片里的年龄，之后可以随时修改。</p>
+        <p>无论是人物还是动物，都可以建立专属档案；出生日期用于自动计算照片中的年龄。</p>
         <label>
-          小狗名字
+          主角名字
           <input
             data-testid="profile-name"
             value={name}
@@ -543,7 +543,7 @@ export default function AlbumApp() {
     await repository.saveProfile(profile);
     await refresh();
     setProfileOpen(false);
-    showToast("小狗档案已保存");
+    showToast("主角档案已保存");
   };
 
   const uploadFiles = async (files) => {
@@ -672,7 +672,7 @@ export default function AlbumApp() {
           <span className="light-chip">
             {lightMode === "day" ? "☀ 窗边日光" : "☾ 暖色夜灯"}
           </span>
-          <button className="circle-button" onClick={() => setProfileOpen(true)} title="小狗档案">
+          <button className="circle-button" onClick={() => setProfileOpen(true)} title="主角档案">
             ✎
           </button>
           <button
@@ -797,7 +797,7 @@ export default function AlbumApp() {
                 <dd>{selected.location || "待补充"}</dd>
               </div>
               <div>
-                <dt>{snapshot.profile?.name || "小狗"}当时</dt>
+                <dt>{snapshot.profile?.name || "主角"}当时</dt>
                 <dd>
                   {
                     calculateAge(

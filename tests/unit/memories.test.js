@@ -8,7 +8,7 @@ import {
 } from "../../src/domain/memories";
 
 describe("memory domain", () => {
-  it("calculates the dog's age on the capture date", () => {
+  it("calculates the subject's age on the capture date", () => {
     expect(calculateAge("2023-11-10", "2024-03-10")).toEqual({
       months: 4,
       label: "4个月",

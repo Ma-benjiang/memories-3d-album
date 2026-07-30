@@ -1,0 +1,15 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "memories-3d-album",
+  "compatibility_date": "2026-07-30",
+  "assets": {
+    "directory": "./out",
+    "not_found_handling": "404-page"
+  },
+  "routes": [
+    {
+      "pattern": "album.mabenjiang.xyz",
+      "custom_domain": true
+    }
+  ]
+}

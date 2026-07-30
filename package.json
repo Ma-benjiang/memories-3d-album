@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "deploy": "npm run build && wrangler deploy",
+    "deploy:dry-run": "npm run build && wrangler deploy --dry-run",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -22,6 +24,7 @@
   },
   "devDependencies": {
     "fake-indexeddb": "^6.2.5",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "wrangler": "^4.114.0"
   }
 }
