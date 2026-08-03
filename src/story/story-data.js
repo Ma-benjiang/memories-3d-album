@@ -16,7 +16,7 @@ export const STORY_OVERVIEW = {
 export const STORY_EXHIBITS = [
   {
     index: "01",
-    url: "/story-dawn-dog.jpg",
+    url: "/story-dawn-dog.webp",
     eyebrow: "THE FIRST LIGHT",
     title: "第一束光，把它带进我们的生活。",
     body: "清晨醒来，它已经趴在窗边。故事从这样普通的一天开始。",
@@ -37,7 +37,7 @@ export const STORY_EXHIBITS = [
   },
   {
     index: "02",
-    url: "/story-rain-dog.jpg",
+    url: "/story-rain-dog.webp",
     eyebrow: "A RAINY WALK",
     title: "雨把街道变慢，也让脚步靠得更近。",
     body: "城市倒映在湿漉漉的路面上，那次散步因此一直亮着。",
@@ -58,7 +58,7 @@ export const STORY_EXHIBITS = [
   },
   {
     index: "03",
-    url: "/story-field-dog.jpg",
+    url: "/story-field-dog.webp",
     eyebrow: "RUN WITH THE WIND",
     title: "跑过的风，替时间留下形状。",
     body: "草地、落叶和奔跑的背影，组成了最自由的一帧。",
@@ -79,7 +79,7 @@ export const STORY_EXHIBITS = [
   },
   {
     index: "04",
-    url: "/story-woman-cat.jpg",
+    url: "/story-woman-cat.webp",
     eyebrow: "SHARED SILENCE",
     title: "陪伴有时，是共享一扇窗的安静。",
     body: "不必发生什么。一个拥抱、一只猫，已经足够成为记忆。",
@@ -100,7 +100,7 @@ export const STORY_EXHIBITS = [
   },
   {
     index: "05",
-    url: "/story-man-dog.jpg",
+    url: "/story-man-dog.webp",
     eyebrow: "A QUIET PROMISE",
     title: "每一次弯腰，都是无需解释的信任。",
     body: "替它系好项圈，也把彼此的日常认真地系在一起。",
@@ -121,7 +121,7 @@ export const STORY_EXHIBITS = [
   },
   {
     index: "06",
-    url: "/story-night-cat.jpg",
+    url: "/story-night-cat.webp",
     eyebrow: "OPEN IT AGAIN",
     title: "深夜翻开照片，它又回到眼前。",
     body: "回忆不是文件列表。它有距离、有光线，也有重新靠近的时刻。",

@@ -3,10 +3,15 @@
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { STORY_CHAPTERS } from "./story-data";
-import { StoryScene } from "./story-scene";
+
+const StoryScene = dynamic(
+  () => import("./story-scene").then((module) => module.StoryScene),
+  { ssr: false },
+);
 
 function useExperiencePreferences() {
   const [preferences, setPreferences] = useState({
@@ -38,6 +43,7 @@ export default function StoryHome() {
   const containerRef = useRef(null);
   const chapterRefs = useRef([]);
   const progressRef = useRef(null);
+  const [sceneReady, setSceneReady] = useState(false);
   const story = useRef({
     cameraProgress: 0,
     lookProgress: 0,
@@ -45,6 +51,7 @@ export default function StoryHome() {
     lightIntensity: 0,
   });
   const { mobile, reducedMotion } = useExperiencePreferences();
+  const handleSceneReady = useCallback(() => setSceneReady(true), []);
 
   useLayoutEffect(() => {
     if (reducedMotion || !containerRef.current) {
@@ -141,8 +148,20 @@ export default function StoryHome() {
       ref={containerRef}
       className={`story-home ${reducedMotion ? "is-reduced" : ""}`}
     >
-      <div className="story-canvas" aria-hidden="true">
-        <StoryScene story={story} mobile={mobile} reducedMotion={reducedMotion} />
+      <div
+        className={`story-canvas ${sceneReady ? "is-ready" : ""}`}
+        aria-hidden="true"
+      >
+        <StoryScene
+          story={story}
+          mobile={mobile}
+          reducedMotion={reducedMotion}
+          onReady={handleSceneReady}
+        />
+        <div className="story-loader">
+          <i />
+          <span>正在布展</span>
+        </div>
       </div>
 
       <header className="story-header">

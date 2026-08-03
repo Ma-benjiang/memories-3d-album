@@ -7,7 +7,7 @@ import {
   useGLTF,
 } from "@react-three/drei";
 import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
-import { useEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { getStoryPath, STORY_EXHIBITS } from "./story-data";
@@ -116,6 +116,14 @@ function CameraRig({ story, mobile, reducedMotion }) {
       camera.updateProjectionMatrix();
     }
   });
+
+  return null;
+}
+
+function SceneReady({ onReady }) {
+  useEffect(() => {
+    onReady?.();
+  }, [onReady]);
 
   return null;
 }
@@ -513,22 +521,26 @@ function StoryModels({ reducedMotion }) {
 
 useGLTF.preload("/models/denis-circular-gallery.glb");
 
-export function StoryScene({ story, mobile, reducedMotion }) {
+export function StoryScene({ story, mobile, reducedMotion, onReady }) {
   return (
     <Canvas
       dpr={mobile ? 1 : [1, 1.5]}
       camera={{ fov: 64, near: 0.1, far: 40, position: [0, 3.2, 0.8] }}
-      gl={{ antialias: !mobile, alpha: false, powerPreference: "high-performance" }}
+      gl={{ antialias: !mobile, alpha: true, powerPreference: "high-performance" }}
       shadows={!mobile}
       frameloop={reducedMotion ? "demand" : "always"}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
         gl.toneMappingExposure = mobile ? 0.96 : 1.02;
+        gl.setClearAlpha(0);
       }}
     >
-      <GalleryArchitecture story={story} mobile={mobile} reducedMotion={reducedMotion} />
-      <StoryModels reducedMotion={reducedMotion} />
-      <CameraRig story={story} mobile={mobile} reducedMotion={reducedMotion} />
+      <Suspense fallback={null}>
+        <GalleryArchitecture story={story} mobile={mobile} reducedMotion={reducedMotion} />
+        <StoryModels reducedMotion={reducedMotion} />
+        <CameraRig story={story} mobile={mobile} reducedMotion={reducedMotion} />
+        <SceneReady onReady={onReady} />
+      </Suspense>
     </Canvas>
   );
 }
