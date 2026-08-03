@@ -1,0 +1,10 @@
+ART ASSET ATTRIBUTION
+
+"Art Gallery" by Denis Cliofas
+Source: https://sketchfab.com/3d-models/art-gallery-3c3248e07296402ead6facab0a09bdcc
+License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+License URL: https://creativecommons.org/licenses/by/4.0/
+
+The model in denis-circular-gallery.glb was optimized for web delivery with
+glTF-Transform (Meshopt geometry compression and WebP textures). No ownership
+of the original art asset is claimed.

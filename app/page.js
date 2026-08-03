@@ -1,5 +1,5 @@
-import AlbumApp from "../src/ui/album-app";
+import StoryHome from "../src/story/story-home";
 
 export default function HomePage() {
-  return <AlbumApp />;
+  return <StoryHome />;
 }
